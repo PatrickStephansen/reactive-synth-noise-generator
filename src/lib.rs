@@ -111,7 +111,6 @@ impl NoiseGenerator {
 			if self.is_trigger_high != (trigger_value > 0.0) {
 				unsafe {
 					trigger_changed(trigger_value > 0.0);
-					log(30)
 				}
 				if trigger_value > 0.0 {
 					self.previous_sample = generate_next_value(
@@ -143,7 +142,6 @@ pub unsafe extern "C" fn init(render_quantum_samples: i32) -> *mut NoiseGenerato
 #[link(wasm_import_module = "trigger")]
 extern "C" {
 	fn change(active: bool);
-	fn log(point: i32);
 }
 
 unsafe fn signal_trigger_change(active: bool) {
