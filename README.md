@@ -9,7 +9,7 @@ The noise generator is an AudioWorkletProcessor that generates each sample value
 build command:
 
 ```bash
-cargo build --features "wee_alloc" --release --target=wasm32-unknown-unknown && \
+cargo build --features wee_alloc --release --target=wasm32-unknown-unknown && \
 wasm-opt -Oz --strip-debug -o worklet/reactive_synth_noise_generator.wasm \
 target/wasm32-unknown-unknown/release/reactive_synth_noise_generator.wasm
 ```

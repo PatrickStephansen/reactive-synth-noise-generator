@@ -1,5 +1,7 @@
 const bytesPerMemorySlot = 32 / 8;
 
+const trace = name => arg => console.log(name, arg);
+
 registerProcessor(
 	"reactive-synth-noise-generator",
 	class NoiseGenerator extends AudioWorkletProcessor {
@@ -50,9 +52,7 @@ registerProcessor(
 		}
 
 		async initWasmModule(binary) {
-			console.log('compiling noise generator')
 			const compiledModule = await WebAssembly.compile(binary);
-			console.log('compiled noise generator');
 			this.wasmModule = await WebAssembly.instantiate(compiledModule, {
 				trigger: {
 					change: b => {
@@ -71,13 +71,15 @@ registerProcessor(
 			if (this.wasmModule) {
 				this.float32WasmMemory.set(
 					parameters.stepMin,
-					this.wasmModule.exports.get_step_min_ptr(this.internalProcessorPtr) /
-						bytesPerMemorySlot
+					this.wasmModule.exports.get_step_minimum_ptr(
+						this.internalProcessorPtr
+					) / bytesPerMemorySlot
 				);
 				this.float32WasmMemory.set(
 					parameters.stepMax,
-					this.wasmModule.exports.get_step_max_ptr(this.internalProcessorPtr) /
-						bytesPerMemorySlot
+					this.wasmModule.exports.get_step_maximum_ptr(
+						this.internalProcessorPtr
+					) / bytesPerMemorySlot
 				);
 				this.float32WasmMemory.set(
 					parameters.sampleHold,
@@ -87,14 +89,14 @@ registerProcessor(
 				);
 				this.float32WasmMemory.set(
 					this.manualTriggerOn ? [1] : parameters.nextValueTrigger,
-					this.wasmModule.exports.get_sample_hold_ptr(
+					this.wasmModule.exports.get_next_value_trigger_ptr(
 						this.internalProcessorPtr
 					) / bytesPerMemorySlot
 				);
 				const outputPointer =
 					this.wasmModule.exports.process_quantum(
-						parameters.minStep.length,
-						parameters.maxStep.length,
+						parameters.stepMin.length,
+						parameters.stepMax.length,
 						parameters.sampleHold.length,
 						this.manualTriggerOn ? 1 : parameters.nextValueTrigger.length
 					) / bytesPerMemorySlot;
@@ -104,11 +106,11 @@ registerProcessor(
 					channelIndex++
 				) {
 					for (
-						let sampleIndex = 0;
-						sampleIndex < outputs[0][channelIndex].length;
-						sampleIndex++
+						let sample = 0;
+						sample < outputs[0][channelIndex].length;
+						sample++
 					) {
-						outputs[0][channelIndex][sampleIndex] = this.float32WasmMemory[
+						outputs[0][channelIndex][sample] = this.float32WasmMemory[
 							outputPointer + sample
 						];
 					}

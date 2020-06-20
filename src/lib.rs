@@ -4,11 +4,8 @@
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-use rand::Rng;
-#[cfg(feature = "small_rng")]
 use rand::rngs::SmallRng;
-#[cfg(feature = "small_rng")]
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 
 // rust has a built-in for this but behind a feature flag
 // use the native one if they get their shit together
@@ -74,10 +71,6 @@ pub struct NoiseGenerator {
 	samples_held: f32,
 	previous_sample: f32,
 	is_trigger_high: bool,
-	#[cfg(feature = "small_rng")]
-	rng: rand::rngs::SmallRng,
-	#[cfg(not(feature = "small_rng"))]
-	rng: rand::rngs::ThreadRng,
 }
 
 impl NoiseGenerator {
@@ -94,10 +87,6 @@ impl NoiseGenerator {
 			samples_held: 0.0,
 			previous_sample: 0.1,
 			is_trigger_high: false,
-			#[cfg(feature = "small_rng")]
-			rng: SmallRng::from_entropy(),
-			#[cfg(not(feature = "small_rng"))]
-			rng: rand::thread_rng(),
 		}
 	}
 
@@ -112,7 +101,7 @@ impl NoiseGenerator {
 			if sample_hold >= 1.0 && self.samples_held >= sample_hold {
 				self.samples_held -= sample_hold;
 				self.previous_sample = generate_next_value(
-					&mut self.rng,
+					&mut rand::thread_rng(),
 					self.previous_sample,
 					get_parameter(&self.step_minimum, 0.0, 1.0, sample_index),
 					get_parameter(&self.step_maximum, 0.0, 1.0, sample_index),
@@ -122,10 +111,11 @@ impl NoiseGenerator {
 			if self.is_trigger_high != (trigger_value > 0.0) {
 				unsafe {
 					trigger_changed(trigger_value > 0.0);
+					log(30)
 				}
 				if trigger_value > 0.0 {
 					self.previous_sample = generate_next_value(
-						&mut self.rng,
+						&mut rand::thread_rng(),
 						self.previous_sample,
 						get_parameter(&self.step_minimum, 0.0, 1.0, sample_index),
 						get_parameter(&self.step_maximum, 0.0, 1.0, sample_index),
@@ -153,6 +143,7 @@ pub unsafe extern "C" fn init(render_quantum_samples: i32) -> *mut NoiseGenerato
 #[link(wasm_import_module = "trigger")]
 extern "C" {
 	fn change(active: bool);
+	fn log(point: i32);
 }
 
 unsafe fn signal_trigger_change(active: bool) {
