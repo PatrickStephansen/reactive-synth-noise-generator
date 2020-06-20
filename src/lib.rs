@@ -182,3 +182,68 @@ pub unsafe extern "C" fn get_sample_hold_ptr(me: *mut NoiseGenerator) -> *mut f3
 pub unsafe extern "C" fn get_next_value_trigger_ptr(me: *mut NoiseGenerator) -> *mut f32 {
 	(*me).next_value_trigger.as_mut_ptr()
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn generates_sample_in_correct_range() {
+		for _ in 0..48000 {
+			let next_sample =
+				generate_next_value(&mut rand::rngs::SmallRng::from_entropy(), 0.8, 0.1, 1.0);
+			assert_eq!(
+				next_sample > 0.9 || next_sample < 0.7,
+				true,
+				"lower bound enforced"
+			);
+			assert_eq!(
+				next_sample < 1.0 && next_sample > -1.8,
+				true,
+				"upper bound enforced"
+			);
+		}
+	}
+
+	#[test]
+	fn updates_output_regularly_for_fixed_sample_hold() {
+		let mut ng = NoiseGenerator::new(7);
+		unsafe {
+			ng.step_minimum.set_len(1);
+			ng.step_maximum.set_len(1);
+			ng.sample_hold.set_len(1);
+			ng.next_value_trigger.set_len(1);
+			ng.step_minimum[0] = 0.1;
+			ng.step_maximum[0] = 0.2;
+			ng.sample_hold[0] = 3.0;
+			ng.process(|b| assert_ne!(b, true));
+			assert_eq!(ng.output[0], ng.output[1], "second sample equals first");
+			assert_eq!(ng.output[0], ng.output[2], "third sample equals first");
+			assert_ne!(ng.output[0], ng.output[3], "forth sample different");
+			assert_eq!(ng.output[3], ng.output[4], "fifth sample equals forth");
+			assert_eq!(ng.output[3], ng.output[5], "sixth sample equals forth");
+			assert_ne!(ng.output[3], ng.output[6], "seventh sample different");
+		}
+	}
+
+	#[test]
+	fn sample_hold_deals_with_fractional_values() {
+		let mut ng = NoiseGenerator::new(7);
+		unsafe {
+			ng.step_minimum.set_len(1);
+			ng.step_maximum.set_len(1);
+			ng.sample_hold.set_len(1);
+			ng.next_value_trigger.set_len(1);
+			ng.step_minimum[0] = 0.1;
+			ng.step_maximum[0] = 0.2;
+			ng.sample_hold[0] = 1.5;
+			ng.process(|b| assert_ne!(b, true));
+			assert_eq!(ng.output[0], ng.output[1], "second sample equals first");
+			assert_ne!(ng.output[1], ng.output[2], "third sample different, remainder 0.5");
+			assert_ne!(ng.output[2], ng.output[3], "forth sample different, remainder 0");
+			assert_eq!(ng.output[3], ng.output[4], "fifth sample equals forth");
+			assert_ne!(ng.output[4], ng.output[5], "sixth sample different, remainder 0.5");
+			assert_ne!(ng.output[5], ng.output[6], "seventh sample different, remainder 0");
+		}
+	}
+}
