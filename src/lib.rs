@@ -188,7 +188,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn generates_sample_in_correct_range() {
+	fn generates_samples_in_correct_range() {
 		for _ in 0..48000 {
 			let next_sample =
 				generate_next_value(&mut rand::rngs::SmallRng::from_entropy(), 0.8, 0.1, 1.0);
@@ -239,11 +239,23 @@ mod tests {
 			ng.sample_hold[0] = 1.5;
 			ng.process(|b| assert_ne!(b, true));
 			assert_eq!(ng.output[0], ng.output[1], "second sample equals first");
-			assert_ne!(ng.output[1], ng.output[2], "third sample different, remainder 0.5");
-			assert_ne!(ng.output[2], ng.output[3], "forth sample different, remainder 0");
+			assert_ne!(
+				ng.output[1], ng.output[2],
+				"third sample different, remainder 0.5"
+			);
+			assert_ne!(
+				ng.output[2], ng.output[3],
+				"forth sample different, remainder 0"
+			);
 			assert_eq!(ng.output[3], ng.output[4], "fifth sample equals forth");
-			assert_ne!(ng.output[4], ng.output[5], "sixth sample different, remainder 0.5");
-			assert_ne!(ng.output[5], ng.output[6], "seventh sample different, remainder 0");
+			assert_ne!(
+				ng.output[4], ng.output[5],
+				"sixth sample different, remainder 0.5"
+			);
+			assert_ne!(
+				ng.output[5], ng.output[6],
+				"seventh sample different, remainder 0"
+			);
 		}
 	}
 }
