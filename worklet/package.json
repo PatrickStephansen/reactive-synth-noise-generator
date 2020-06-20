@@ -1,0 +1,29 @@
+{
+  "name": "reactive-synth-noise-generator",
+  "version": "0.1.0",
+  "description": "Noise generator implemented as an AudioWorkletProcessor. Compatible with the web audio API. Made for reactive-synth.",
+  "main": "noise-generator.js",
+  "files": [
+    "bitcrusher.js",
+    "reactive_synth_noise_generator.wasm"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/PatrickStephansen/reactive-synth-noise-generator.git"
+  },
+  "keywords": [
+    "webaudio",
+    "audioworkletprocessor",
+    "dsp",
+    "noisegenerator"
+  ],
+  "author": "Patrick Stephansen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/PatrickStephansen/reactive-synth-noise-generator/issues"
+  },
+  "homepage": "https://github.com/PatrickStephansen/reactive-synth-noise-generator#readme"
+}

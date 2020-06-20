@@ -1,0 +1,21 @@
+[package]
+name = "reactive-synth-noise-generator"
+version = "0.1.0"
+authors = ["Patrick Stephansen <pstephansen89@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+small_rng = []
+
+[dependencies]
+wee_alloc = { version = "0.4.5", optional = true }
+rand = { version = "0.7.3", features = ["small_rng"] }
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+lto = true
+opt-level = "z"
