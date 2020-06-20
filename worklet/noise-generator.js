@@ -58,7 +58,7 @@ registerProcessor(
 					change: b => {
 						this.triggerChangeMessage.value = b;
 						this.port.postMessage(this.triggerChangeMessage);
-					}
+					},
 				}
 			});
 			this.internalProcessorPtr = this.wasmModule.exports.init(128);
@@ -95,6 +95,7 @@ registerProcessor(
 				);
 				const outputPointer =
 					this.wasmModule.exports.process_quantum(
+						this.internalProcessorPtr,
 						parameters.stepMin.length,
 						parameters.stepMax.length,
 						parameters.sampleHold.length,
