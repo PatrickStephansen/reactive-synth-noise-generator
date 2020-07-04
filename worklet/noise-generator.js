@@ -49,8 +49,8 @@ registerProcessor(
 			}
 		}
 
-		async initWasmModule(compiledModule) {
-			this.wasmModule = await WebAssembly.instantiate(compiledModule, {
+		async initWasmModule(wasmModule) {
+			this.wasmModule = await WebAssembly.instantiate(wasmModule, {
 				imports: {
 					change: b => {
 						this.triggerChangeMessage.value = b;
