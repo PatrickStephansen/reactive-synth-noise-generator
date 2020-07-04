@@ -45,12 +45,11 @@ registerProcessor(
 				this.manualTriggerOn = event.data.value;
 			}
 			if (event.data && event.data.type === "wasm") {
-				this.initWasmModule(event.data.wasmBinary);
+				this.initWasmModule(event.data.wasmModule);
 			}
 		}
 
-		async initWasmModule(binary) {
-			const compiledModule = await WebAssembly.compile(binary);
+		async initWasmModule(compiledModule) {
 			this.wasmModule = await WebAssembly.instantiate(compiledModule, {
 				imports: {
 					change: b => {
