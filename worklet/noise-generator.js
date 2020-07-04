@@ -54,11 +54,12 @@ registerProcessor(
 		async initWasmModule(binary) {
 			const compiledModule = await WebAssembly.compile(binary);
 			this.wasmModule = await WebAssembly.instantiate(compiledModule, {
-				trigger: {
+				imports: {
 					change: b => {
 						this.triggerChangeMessage.value = b;
 						this.port.postMessage(this.triggerChangeMessage);
 					},
+					random: Math.random
 				}
 			});
 			this.internalProcessorPtr = this.wasmModule.exports.init(128);

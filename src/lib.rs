@@ -4,9 +4,6 @@
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng};
-
 // rust has a built-in for this but behind a feature flag
 // use the native one if they get their shit together
 fn clamp(min_value: f32, max_value: f32, value: f32) -> f32 {
@@ -33,19 +30,19 @@ fn get_parameter(param: &Vec<f32>, min_value: f32, max_value: f32, index: usize)
 	}
 }
 
-fn generate_next_value<R: Rng>(
-	rng: &mut R,
+unsafe fn generate_next_value(
+	rng: unsafe fn() -> f32,
 	previous_value: f32,
 	step_minimum: f32,
 	step_maximum: f32,
 ) -> f32 {
 	let step_size: f32;
 	if step_minimum < step_maximum {
-		step_size = rng.gen_range(step_minimum, step_maximum);
+		step_size = rng() * (step_maximum - step_minimum) + step_minimum;
 	} else {
-		step_size = rng.gen_range(step_maximum, step_minimum)
+		step_size = rng() * (step_minimum - step_maximum) + step_maximum;
 	}
-	let prefer_up = rng.gen::<f32>() > 0.5;
+	let prefer_up = rng() > 0.5;
 	if prefer_up {
 		if previous_value + step_size > 1.0 {
 			previous_value - step_size
@@ -90,7 +87,7 @@ impl NoiseGenerator {
 		}
 	}
 
-	pub fn process(&mut self, trigger_changed: unsafe fn(bool)) {
+	pub fn process(&mut self, trigger_changed: unsafe fn(bool), get_random: unsafe fn() -> f32) {
 		for sample_index in 0..self.render_quantum_samples {
 			// recover from overflow
 			if self.samples_held < 0.0 {
@@ -100,12 +97,14 @@ impl NoiseGenerator {
 			// keep playing previous sample forever if sampleHold < 1
 			if sample_hold >= 1.0 && self.samples_held >= sample_hold {
 				self.samples_held -= sample_hold;
-				self.previous_sample = generate_next_value(
-					&mut rand::thread_rng(),
-					self.previous_sample,
-					get_parameter(&self.step_minimum, 0.0, 1.0, sample_index),
-					get_parameter(&self.step_maximum, 0.0, 1.0, sample_index),
-				);
+				unsafe {
+					self.previous_sample = generate_next_value(
+						get_random,
+						self.previous_sample,
+						get_parameter(&self.step_minimum, 0.0, 1.0, sample_index),
+						get_parameter(&self.step_maximum, 0.0, 1.0, sample_index),
+					);
+				}
 			}
 			let trigger_value = get_parameter(&self.next_value_trigger, 0.0, 1.0, sample_index);
 			if self.is_trigger_high != (trigger_value > 0.0) {
@@ -113,12 +112,14 @@ impl NoiseGenerator {
 					trigger_changed(trigger_value > 0.0);
 				}
 				if trigger_value > 0.0 {
-					self.previous_sample = generate_next_value(
-						&mut rand::thread_rng(),
-						self.previous_sample,
-						get_parameter(&self.step_minimum, 0.0, 1.0, sample_index),
-						get_parameter(&self.step_maximum, 0.0, 1.0, sample_index),
-					);
+					unsafe {
+						self.previous_sample = generate_next_value(
+							get_random,
+							self.previous_sample,
+							get_parameter(&self.step_minimum, 0.0, 1.0, sample_index),
+							get_parameter(&self.step_maximum, 0.0, 1.0, sample_index),
+						);
+					}
 				}
 			}
 			self.output[sample_index] = self.previous_sample;
@@ -139,13 +140,17 @@ pub unsafe extern "C" fn init(render_quantum_samples: i32) -> *mut NoiseGenerato
 	)))
 }
 
-#[link(wasm_import_module = "trigger")]
+#[link(wasm_import_module = "imports")]
 extern "C" {
 	fn change(active: bool);
+	fn random() -> f32;
 }
 
 unsafe fn signal_trigger_change(active: bool) {
 	change(active);
+}
+unsafe fn next_random() -> f32 {
+	random()
 }
 
 #[no_mangle]
@@ -162,7 +167,7 @@ pub unsafe extern "C" fn process_quantum(
 	(*me)
 		.next_value_trigger
 		.set_len(next_value_trigger_length as usize);
-	(*me).process(signal_trigger_change);
+	(*me).process(signal_trigger_change, next_random);
 	(*me).get_output()
 }
 
@@ -187,21 +192,25 @@ pub unsafe extern "C" fn get_next_value_trigger_ptr(me: *mut NoiseGenerator) -> 
 mod tests {
 	use super::*;
 
+	use rand::Rng;
+
 	#[test]
 	fn generates_samples_in_correct_range() {
 		for _ in 0..48000 {
-			let next_sample =
-				generate_next_value(&mut rand::rngs::SmallRng::from_entropy(), 0.8, 0.1, 1.0);
-			assert_eq!(
-				next_sample > 0.9 || next_sample < 0.7,
-				true,
-				"lower bound enforced"
-			);
-			assert_eq!(
-				next_sample < 1.0 && next_sample > -1.8,
-				true,
-				"upper bound enforced"
-			);
+			unsafe {
+				let next_sample =
+					generate_next_value(|| rand::thread_rng().gen::<f32>(), 0.8, 0.1, 1.0);
+				assert_eq!(
+					next_sample > 0.9 || next_sample < 0.7,
+					true,
+					"lower bound enforced"
+				);
+				assert_eq!(
+					next_sample < 1.0 && next_sample > -1.8,
+					true,
+					"upper bound enforced"
+				);
+			}
 		}
 	}
 
@@ -216,7 +225,7 @@ mod tests {
 			ng.step_minimum[0] = 0.1;
 			ng.step_maximum[0] = 0.2;
 			ng.sample_hold[0] = 3.0;
-			ng.process(|b| assert_ne!(b, true));
+			ng.process(|_| (), || rand::thread_rng().gen::<f32>());
 			assert_eq!(ng.output[0], ng.output[1], "second sample equals first");
 			assert_eq!(ng.output[0], ng.output[2], "third sample equals first");
 			assert_ne!(ng.output[0], ng.output[3], "forth sample different");
@@ -237,7 +246,7 @@ mod tests {
 			ng.step_minimum[0] = 0.1;
 			ng.step_maximum[0] = 0.2;
 			ng.sample_hold[0] = 1.5;
-			ng.process(|b| assert_ne!(b, true));
+			ng.process(|_| (), || rand::thread_rng().gen::<f32>());
 			assert_eq!(ng.output[0], ng.output[1], "second sample equals first");
 			assert_ne!(
 				ng.output[1], ng.output[2],
