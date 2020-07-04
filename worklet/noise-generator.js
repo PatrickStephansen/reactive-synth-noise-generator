@@ -1,7 +1,5 @@
 const bytesPerMemorySlot = 32 / 8;
 
-const trace = name => arg => console.log(name, arg);
-
 registerProcessor(
 	"reactive-synth-noise-generator",
 	class NoiseGenerator extends AudioWorkletProcessor {
