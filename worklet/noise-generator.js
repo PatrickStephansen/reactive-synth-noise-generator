@@ -10,27 +10,27 @@ registerProcessor(
 					defaultValue: 1,
 					minValue: 0,
 					maxValue: 1,
-					automationRate: "a-rate"
+					automationRate: "a-rate",
 				},
 				{
 					name: "stepMin",
 					defaultValue: 0,
 					minValue: 0,
 					maxValue: 1,
-					automationRate: "a-rate"
+					automationRate: "a-rate",
 				},
 				{
 					name: "sampleHold",
 					defaultValue: 1,
 					minValue: 0,
 					maxValue: 1000000,
-					automationRate: "a-rate"
+					automationRate: "a-rate",
 				},
 				{
 					name: "nextValueTrigger",
 					defaultValue: 0,
-					automationRate: "a-rate"
-				}
+					automationRate: "a-rate",
+				},
 			];
 		}
 		constructor() {
@@ -45,19 +45,21 @@ registerProcessor(
 				this.manualTriggerOn = event.data.value;
 			}
 			if (event.data && event.data.type === "wasm") {
-				this.initWasmModule(event.data.wasmModule);
+				this.initWasmModule(event.data.wasmModule).then(() =>
+					this.port.postMessage({ type: "module-ready", value: true })
+				);
 			}
 		}
 
 		async initWasmModule(wasmModule) {
 			this.wasmModule = await WebAssembly.instantiate(wasmModule, {
 				imports: {
-					change: b => {
+					change: (b) => {
 						this.triggerChangeMessage.value = b;
 						this.port.postMessage(this.triggerChangeMessage);
 					},
-					random: Math.random
-				}
+					random: Math.random,
+				},
 			});
 			this.internalProcessorPtr = this.wasmModule.exports.init(128);
 			this.float32WasmMemory = new Float32Array(
