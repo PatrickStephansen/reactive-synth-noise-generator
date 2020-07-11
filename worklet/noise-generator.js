@@ -38,6 +38,7 @@ registerProcessor(
 			this.port.onmessage = this.handleMessage.bind(this);
 			this.triggerChangeMessage = { type: "trigger-change", value: false };
 			this.manualTriggerOn = false;
+			this.manualTriggerOnParameter = [1];
 		}
 
 		handleMessage(event) {
@@ -88,7 +89,9 @@ registerProcessor(
 					) / bytesPerMemorySlot
 				);
 				this.float32WasmMemory.set(
-					this.manualTriggerOn ? [1] : parameters.nextValueTrigger,
+					this.manualTriggerOn
+						? this.manualTriggerOnParameter
+						: parameters.nextValueTrigger,
 					this.wasmModule.exports.get_next_value_trigger_ptr(
 						this.internalProcessorPtr
 					) / bytesPerMemorySlot
@@ -99,7 +102,9 @@ registerProcessor(
 						parameters.stepMin.length,
 						parameters.stepMax.length,
 						parameters.sampleHold.length,
-						this.manualTriggerOn ? 1 : parameters.nextValueTrigger.length
+						this.manualTriggerOn
+							? this.manualTriggerOnParameter.length
+							: parameters.nextValueTrigger.length
 					) / bytesPerMemorySlot;
 				for (
 					let channelIndex = 0;
