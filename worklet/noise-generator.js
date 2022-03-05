@@ -36,12 +36,19 @@ registerProcessor(
 		constructor() {
 			super();
 			this.port.onmessage = this.handleMessage.bind(this);
+			this.port.onmessageerror = () =>
+				console.log("fucked message received in noise generator");
 			this.triggerChangeMessage = { type: "trigger-change", value: false };
 			this.manualTriggerOn = false;
 			this.manualTriggerOnParameter = [1];
 		}
 
 		handleMessage(event) {
+			console.log(
+				"event received by noise generator:",
+				event.data.type,
+				event.data.wasmModule
+			);
 			if (event.data && event.data.type === "manual-trigger") {
 				this.manualTriggerOn = event.data.value;
 			}
@@ -53,6 +60,7 @@ registerProcessor(
 		}
 
 		async initWasmModule(wasmModule) {
+			wasmModule = await WebAssembly.compile(wasmModule);
 			this.wasmModule = await WebAssembly.instantiate(wasmModule, {
 				imports: {
 					change: (b) => {
@@ -116,9 +124,8 @@ registerProcessor(
 						sample < outputs[0][channelIndex].length;
 						sample++
 					) {
-						outputs[0][channelIndex][sample] = this.float32WasmMemory[
-							outputPointer + sample
-						];
+						outputs[0][channelIndex][sample] =
+							this.float32WasmMemory[outputPointer + sample];
 					}
 				}
 			}
