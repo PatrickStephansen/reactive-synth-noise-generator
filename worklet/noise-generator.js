@@ -36,19 +36,12 @@ registerProcessor(
 		constructor() {
 			super();
 			this.port.onmessage = this.handleMessage.bind(this);
-			this.port.onmessageerror = () =>
-				console.log("fucked message received in noise generator");
 			this.triggerChangeMessage = { type: "trigger-change", value: false };
 			this.manualTriggerOn = false;
 			this.manualTriggerOnParameter = [1];
 		}
 
 		handleMessage(event) {
-			console.log(
-				"event received by noise generator:",
-				event.data.type,
-				event.data.wasmModule
-			);
 			if (event.data && event.data.type === "manual-trigger") {
 				this.manualTriggerOn = event.data.value;
 			}
